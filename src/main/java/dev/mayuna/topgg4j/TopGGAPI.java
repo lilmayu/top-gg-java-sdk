@@ -226,4 +226,11 @@ public class TopGGAPI extends SimpleAPI {
                 .addPathParameter(new PathParameter("user_id", userId))
                 .build());
     }
+
+    public Action<MultiplierStatus> fetchMultiplierStatus() {
+        return new Action<>(this, MultiplierStatus.class, new APIRequest.Builder()
+                .setEndpoint("/weekend")
+                .setMethod("GET")
+                .build());
+    }
 }
