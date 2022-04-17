@@ -15,7 +15,7 @@ repositories {
 dependencies {
 
     // Simple Java API Wrapper
-    implementation name: 'simple-java-api-wrapper-1.0'
+    implementation 'dev.mayuna:simple-java-api-wrapper:1.0'
 
     // GSON
     compileOnly 'com.google.code.gson:gson:2.9.0'
