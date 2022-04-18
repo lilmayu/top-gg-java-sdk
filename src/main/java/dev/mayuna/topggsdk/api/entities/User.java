@@ -1,10 +1,13 @@
-package dev.mayuna.topgg4j.api.entities;
+package dev.mayuna.topggsdk.api.entities;
 
 import com.google.gson.annotations.SerializedName;
 import dev.mayuna.simpleapi.Action;
-import dev.mayuna.topgg4j.api.TopGGAPIResponse;
+import dev.mayuna.topggsdk.api.TopGGAPIResponse;
 import lombok.Getter;
 
+/**
+ * Information about top.gg user. There are also methods like {@link #fetchVoteStatus()}
+ */
 public class User extends TopGGAPIResponse {
 
     private @Getter String username;

@@ -1,9 +1,12 @@
-package dev.mayuna.topgg4j.api.entities;
+package dev.mayuna.topggsdk.api.entities;
 
 import com.google.gson.annotations.SerializedName;
-import dev.mayuna.topgg4j.api.TopGGAPIResponse;
+import dev.mayuna.topggsdk.api.TopGGAPIResponse;
 import lombok.Getter;
 
+/**
+ * Specific stats about top.gg bot (server count, shards, shard count)
+ */
 public class Stats extends TopGGAPIResponse {
 
     private @Getter @SerializedName("server_count") int serverCount;

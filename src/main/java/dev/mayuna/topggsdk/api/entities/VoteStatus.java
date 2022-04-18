@@ -1,8 +1,10 @@
-package dev.mayuna.topgg4j.api.entities;
+package dev.mayuna.topggsdk.api.entities;
 
-import dev.mayuna.topgg4j.api.TopGGAPIResponse;
-import lombok.Getter;
+import dev.mayuna.topggsdk.api.TopGGAPIResponse;
 
+/**
+ * Tells if user voted
+ */
 public class VoteStatus extends TopGGAPIResponse {
 
     private int voted;

@@ -1,12 +1,13 @@
-package dev.mayuna.topgg4j.api.entities;
+package dev.mayuna.topggsdk.api.entities;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 import dev.mayuna.simpleapi.Action;
-import dev.mayuna.topgg4j.api.TopGGAPIResponse;
+import dev.mayuna.topggsdk.api.TopGGAPIResponse;
 import lombok.Getter;
 
+/**
+ * Information about top.gg bot. There are also methods like {@link #fetchStats()}, {@link #updateBotStats(int, int)}, etc.
+ */
 public class Bot extends TopGGAPIResponse {
 
     private @Getter @SerializedName("defAvatar") String defaultAvatar;

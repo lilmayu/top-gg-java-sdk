@@ -1,14 +1,16 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '7.0.0'
+    id 'io.codearte.nexus-staging' version '0.11.0'
 }
+
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
 
 group 'dev.mayuna'
 version '1.0'
 
 repositories {
-    flatDir { dirs 'libs'}
-
     mavenCentral()
 }
 
@@ -30,12 +32,82 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
 }
 
-shadowJar {
-    archivesBaseName = "top-gg4j"
+task compileLibrary(type: Jar) {
+    from { configurations.compile.findAll { !it.name.endsWith('pom') }.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
 }
 
 test {
     useJUnit();
 }
 
-shadowJar.dependsOn test
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+            repository(url: "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            snapshotRepository(url: "https://s01.oss.sonatype.org/content/repositories/snapshots/") {
+                authentication(userName: ossrhUsername, password: ossrhPassword)
+            }
+
+            pom.project {
+                name 'top-gg-java-sdk'
+                packaging 'jar'
+                // optionally artifactId can be defined here
+                description 'Java wrapper for Top.gg\'s API using Simple Java API Wrapper'
+                url 'https://mayuna.dev/'
+
+                scm {
+                    connection 'scm:https://github.com/lilmayu/SimpleJavaAPIWrapper'
+                    developerConnection 'scm:git:https://github.com/lilmayu/SimpleJavaAPIWrapper.git'
+                    url 'https://github.com/lilmayu/SimpleJavaAPIWrapper'
+                }
+
+                licenses {
+                    license {
+                        name 'Apache License 2.0'
+                        url 'https://www.apache.org/licenses/LICENSE-2.0'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'mayuna'
+                        name 'Marek Lof'
+                        email 'uwulilmayu@gmail.com'
+                    }
+                }
+            }
+        }
+    }
+}
+
+nexusStaging {
+    packageGroup = "dev.mayuna" //optional if packageGroup == project.getGroup()
+}
+
+task javadocJar(type: Jar) {
+    classifier = 'javadoc'
+    from javadoc
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives javadocJar, sourcesJar
+}
+
+signing {
+    sign configurations.archives
+}
+
+compileLibrary.dependsOn test
+compileLibrary.dependsOn javadocJar
+compileLibrary.dependsOn sourcesJar

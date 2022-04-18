@@ -1,9 +1,11 @@
-package dev.mayuna.topgg4j.api.entities;
+package dev.mayuna.topggsdk.api.entities;
 
-import com.google.gson.annotations.SerializedName;
-import dev.mayuna.topgg4j.api.TopGGAPIResponse;
+import dev.mayuna.topggsdk.api.TopGGAPIResponse;
 import lombok.Getter;
 
+/**
+ * Search result with found bots in an array
+ */
 public class Bots extends TopGGAPIResponse {
 
     private @Getter Bot[] results;
