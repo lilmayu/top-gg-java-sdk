@@ -52,7 +52,7 @@ dependencies {
 - [Javadoc](https://data.mayuna.dev/javadocs/top-gg-java-sdk/)
 
 ## Requirements
-- Java 11 and newer
+- Java 11 or newer
 - [Gson](https://github.com/google/gson)
 
 ## How to use
