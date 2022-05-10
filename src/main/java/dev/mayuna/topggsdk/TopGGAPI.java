@@ -1,14 +1,21 @@
 package dev.mayuna.topggsdk;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.mayuna.simpleapi.*;
 import dev.mayuna.topggsdk.api.TopGGAPIResponse;
 import dev.mayuna.topggsdk.api.entities.*;
+import dev.mayuna.topggsdk.api.entities.webhooks.Webhook;
+import io.javalin.Javalin;
+import io.javalin.http.HttpCode;
 import lombok.Getter;
 import lombok.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.http.HttpRequest;
+import java.util.function.Consumer;
 
 /**
  * Main class of Top-GG API wrapped in Java. Using this class, you can request stuff and post stuff to top.gg's API. Some endpoints/methods do not require bot ID.
@@ -18,9 +25,19 @@ public class TopGGAPI extends SimpleAPI {
     private final @Getter String token;
     private final @Getter String botId;
 
-    public TopGGAPI(@NonNull String token, String botId) {
+    private @Getter WebhookHandler webhookHandler;
+
+    public TopGGAPI(@NonNull String token, String botId, int port, String path, String authorization, Consumer<Webhook> webhookListener) {
         this.token = token;
         this.botId = botId;
+
+        if (port != -1) {
+            webhookHandler = new WebhookHandler(port, path, authorization, webhookListener);
+        }
+    }
+
+    public TopGGAPI(@NonNull String token, String botId) {
+        this(token, botId, -1, null, null, null);
     }
 
     public TopGGAPI(@NonNull String token) {
@@ -43,8 +60,6 @@ public class TopGGAPI extends SimpleAPI {
         }
     }
 
-    // API
-
     /**
      * Searches bots by specified arguments. Bot ID for this endpoint is <b>not required</b>. <br>
      * Default values:<br>
@@ -61,6 +76,8 @@ public class TopGGAPI extends SimpleAPI {
     public Action<Bots> searchBots() {
         return searchBots(50, 0, "", "", "");
     }
+
+    // API
 
     /**
      * Searches bots by specified arguments. Bot ID for this endpoint is <b>not required</b>. <br>
@@ -201,6 +218,7 @@ public class TopGGAPI extends SimpleAPI {
      * Fetches your Bot by specified Bot ID in arguments. Bot ID for this method is <b>not required</b>.
      *
      * @param botId Bot's Discord ID
+     *
      * @return {@link Action} with {@link Bot} object
      *
      * @see <a href="https://docs.top.gg/api/bot/#find-one-bot">https://docs.top.gg/api/bot/#find-one-bot</a>
@@ -450,7 +468,9 @@ public class TopGGAPI extends SimpleAPI {
 
     /**
      * Fetches {@link User} by their Discord user ID
+     *
      * @param userId User ID (Discord user ID)
+     *
      * @return {@link Action} with {@link User} object
      */
     public Action<User> fetchUser(String userId) {
@@ -463,6 +483,7 @@ public class TopGGAPI extends SimpleAPI {
 
     /**
      * Fetches {@link MultiplierStatus} which tells if currently it is weekend (during weekends, bots receive double votes).
+     *
      * @return {@link Action} with {@link MultiplierStatus} object
      */
     public Action<MultiplierStatus> fetchMultiplierStatus() {
@@ -470,5 +491,123 @@ public class TopGGAPI extends SimpleAPI {
                 .setEndpoint("/weekend")
                 .setMethod("GET")
                 .build());
+    }
+
+    public static class Builder {
+
+        private String token = null;
+        private String botId = null;
+
+        private int port = -1;
+        private String path = null;
+        private String authorization = null;
+        private Consumer<Webhook> webhookListener = webhook -> {};
+
+        private Builder() {}
+
+        public static Builder create() {
+            return new Builder();
+        }
+
+        public Builder withToken(@NonNull String token) {
+            this.token = token;
+            return this;
+        }
+
+        public Builder withBotId(@NonNull String botId) {
+            this.botId = botId;
+            return this;
+        }
+
+        public Builder withWebhookListener(int port, @NonNull String path, @NonNull String authorization, @NonNull Consumer<Webhook> webhookListener) {
+            if (port < 0) {
+                throw new IllegalArgumentException("Port cannot be smaller than zero! You should use any port between 1024 and 65535. Use 0 for random open port.");
+            }
+
+            this.port = port;
+            this.path = path;
+            this.authorization = authorization;
+            this.webhookListener = webhookListener;
+            return this;
+        }
+
+        public TopGGAPI build() {
+            return new TopGGAPI(token, botId, port, path, authorization, webhookListener);
+        }
+    }
+
+    private class WebhookHandler {
+
+        private final Logger logger;
+        private final @Getter int port;
+        private final @Getter String path;
+        private final @Getter String authorization;
+        private final @Getter Consumer<Webhook> webhookListener;
+
+        private @Getter Javalin javalin;
+
+        public WebhookHandler(int port, String path, String authorization, Consumer<Webhook> webhookListener) {
+            this.port = port;
+            this.path = path;
+            this.authorization = authorization;
+            this.webhookListener = webhookListener;
+
+            logger = LoggerFactory.getLogger(WebhookHandler.class);
+
+            startJavalin();
+        }
+
+        private void startJavalin() {
+            logger.info("Starting Javalin at port " + port + " with path " + path + " for Top.gg's Webhooks.");
+            javalin = Javalin.create();
+
+            javalin.post(path, ctx -> {
+                logger.debug("Received POST request on " + path);
+
+                String authorizationHeader = ctx.header("Authorization");
+
+                if (!authorization.equals(authorizationHeader)) {
+                    logger.warn("Received POST has suspicious Authorization header! Ignoring this request with HTTP Code 418...");
+                    ctx.status(HttpCode.IM_A_TEAPOT);
+                    return;
+                }
+
+                Webhook webhook;
+
+                try {
+                    webhook = new Gson().fromJson(ctx.body(), Webhook.class);
+                } catch (Exception exception) {
+                    logger.error("Exception occurred while parsing top.gg's webhook! Possibly a bug!", exception);
+                    ctx.status(HttpCode.INTERNAL_SERVER_ERROR);
+                    return;
+                }
+
+                logger.debug("Received Webhook from top.gg from user " + webhook.getUserId());
+
+                try {
+                    webhookListener.accept(webhook);
+                } catch (Exception exception) {
+                    logger.error("Exception occurred while processing provided webhook listener!", exception);
+                    ctx.status(HttpCode.INTERNAL_SERVER_ERROR);
+                    return;
+                }
+
+                ctx.status(HttpCode.OK);
+            });
+
+            try {
+                javalin.start(port);
+            } catch (Exception exception) {
+                logger.error("Exception occurred while starting Javalin!", exception);
+                return;
+            }
+
+            logger.info("Javalin has been started.");
+        }
+
+        public void stop() {
+            logger.info("Stopping Javalin...");
+            javalin.stop();
+        }
     }
 }
