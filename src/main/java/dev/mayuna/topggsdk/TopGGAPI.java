@@ -605,6 +605,9 @@ public class TopGGAPI extends SimpleAPI {
             logger.info("Javalin has been started.");
         }
 
+        /**
+         * Stops Javalin
+         */
         public void stop() {
             logger.info("Stopping Javalin...");
             javalin.stop();
