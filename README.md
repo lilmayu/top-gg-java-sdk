@@ -77,6 +77,8 @@ dependencies {
 ## Requirements
 - Java 11 or newer
 - [Gson](https://github.com/google/gson)
+- Optional: [Javalin](https://javalin.io/)
+  - Only if you plan to use webhooks
 
 ## How to use
 You must have top.gg's token to authenticate within their API. You can get your token here: https://top.gg/bot/:bot_id/webhooks (replace :bot_id with your bot's ID on top.gg)
