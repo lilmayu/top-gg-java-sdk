@@ -16,13 +16,27 @@
 ## Instalation
 ### Maven
 ```xml
+<!-- A. If you do not plan to use webhooks (since v1.1.3) -->
+<dependency>
+    <groupId>dev.mayuna</groupId>
+    <artifactId>top-gg-java-sdk</artifactId>
+    <version>VERSION</version>
+</dependency>
+<exclusions>
+    <exclusion>
+        <groupId>io.javalin</groupId>
+        <artifactId>javalin</artifactId>
+    </exclusion>
+</exclusions>
+
+<!-- B. If you plan to use webhooks -->
 <dependency>
     <groupId>dev.mayuna</groupId>
     <artifactId>top-gg-java-sdk</artifactId>
     <version>VERSION</version>
 </dependency>
 
-<!-- Gson is used for deserializing -->
+<!-- Required: Gson is used for deserializing -->
 <dependency>
   <groupId>com.google.code.gson</groupId>
   <artifactId>gson</artifactId>
@@ -36,10 +50,19 @@ repositories {
 }
 
 dependencies {
-    // Change 'implementation' to 'compile' in old Gradle versions
+    // A. If you do not plan to use webhooks (since v1.1.3)
+    implementation ('dev.mayuna:top-gg-java-sdk:VERSION') {
+        exclude module: 'javalin'
+    }
+    
+    // B. If you plan to use webhooks
     implementation 'dev.mayuna:top-gg-java-sdk:VERSION'
+    // You should also include some logging library which works with slf4j, log4j2 for example:
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.17.2'
+    implementation 'org.apache.logging.log4j:log4j-api:2.17.2'
+    implementation 'org.apache.logging.log4j:log4j-core:2.17.2'
 
-    // Gson is used for deserializing
+    // Required: Gson is used for deserializing
     implementation 'com.google.code.gson:gson:2.9.0'
 }
 ```
@@ -60,9 +83,27 @@ You must have top.gg's token to authenticate within their API. You can get your 
 
 ### `TopGGAPI`'s methods
 ```java
-// Using constructor with bot's ID argument is recommended, but not mandatory.
-TopGGAPI api = new TopGGAPI("token", "bot id");
+// A. Without webhooks
+TopGGAPI topGGAPI = TopGGAPI.Builder.create()
+        .withToken("token")
+        .withBotId("bot id")
+        .build();
+// OR
+TopGGAPI topGGAPI = new TopGGAPI("token", "bot id");
 
+// B. With webhooks
+TopGGAPI topGGAPI = TopGGAPI.Builder.create()
+        .withToken("token")
+        .withBotId("bot id")
+        .withWebhookListener(9999, "/top_gg/", "some_password", webhook -> {
+            //               ^ port ^ path     ^ Authorization password (on top.gg website)
+
+            // Do something with the webhook object
+            // POST requests with invalid Authorization header are automatically dismissed
+        })
+        .build();
+
+// TopGGAPI's methods
 api.searchBots(); // Used for searching on top.gg's page (overloaded method)
 
 api.fetchBot(); // Fetches information about your bot
@@ -75,15 +116,22 @@ api.fetchVoteStatus("user id") // Fetches status whether a user has voted for yo
 api.updateBotStats(); // Used for updating your bot's stats like server count and shard count (overloaded method)
 
 api.fetchUser("user id"); // Fetches information about specified user
+
 api.fetchMultiplierStatus(); // Checks if currently it is weekend (during weekends, bots receive double votes)
 ```
 
 ### Example usage
 ```java
+TopGGAPI api = TopGGAPI.Builder.create()
+        .withToken("token")
+        .withBotId("bot id")
+        .withWebhookListener(9999, "/top_gg/", "some_password", webhook -> {
+            System.out.println("User " + webhook.getUserId() + " has voted!");
+        })
+        .build();
+
 int serverCount = ...; // Number of guilds the bot is on
 int shardCount = ...; // Number of shards
-TopGGAPI api = new TopGGAPI("token", "bot id");
-
 api.updateBotStats(serverCount, shardCount).execute(); // #execute() returns CompletableFuture
 
 api.fetchUser("680508886574170122").execute().thenAcceptAsync(user -> {
